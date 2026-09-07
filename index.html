@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Deck Layout Calculator</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1e293b">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Deck Calc">
+  <link rel="apple-touch-icon" href="icon-180.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+  <style>
+    :root {
+      --primary: #1e293b;
+      --accent: #d97706;
+      --bg: #f1f5f9;
+      --card-bg: #ffffff;
+      --border: #cbd5e1;
+      --highlight: #fef3c7;
+    }
+
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      max-width: 720px; 
+      margin: 10px auto; 
+      padding: 10px; 
+      background: var(--bg);
+      color: var(--primary);
+    }
+
+    .card { 
+      background: var(--card-bg); 
+      padding: 15px; 
+      border-radius: 8px; 
+      box-shadow: 0 2px 4px rgba(0,0,0,0.08); 
+      border: 1px solid var(--border);
+    }
+
+    .header {
+      background: var(--primary);
+      color: white;
+      margin: -15px -15px 12px -15px;
+      padding: 10px 15px;
+      border-radius: 8px 8px 0 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    h2 { margin: 0; font-size: 1.1rem; }
+
+    .btn-group-header {
+      display: flex;
+      gap: 6px;
+    }
+
+    .action-btn {
+      background: #334155;
+      color: #f8fafc;
+      border: 1px solid #475569;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .action-btn:hover {
+      background: var(--accent);
+      color: #ffffff;
+      border-color: var(--accent);
+    }
+
+    .action-btn.save {
+      background: #15803d;
+      border-color: #166534;
+    }
+
+    .top-panel {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 12px;
+      margin-bottom: 12px;
+      transition: all 0.3s ease-in-out;
+      overflow: hidden;
+      max-height: 500px;
+      opacity: 1;
+      align-items: start;
+    }
+
+    .top-panel.collapsed {
+      max-height: 0;
+      margin-bottom: 0;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    @media (max-width: 480px) {
+      .top-panel {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Structured Input Layout */
+    .input-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      align-items: end;
+    }
+
+    .input-group { 
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .input-group.full { 
+      grid-column: span 2; 
+    }
+
+    label { 
+      font-weight: 600; 
+      font-size: 0.75rem; 
+      margin-bottom: 3px; 
+      height: 14px;
+      white-space: nowrap;
+    }
+    
+    input[type="number"], input[type="text"], select { 
+      width: 100%; 
+      height: 30px;
+      padding: 4px 8px; 
+      box-sizing: border-box; 
+      border: 1px solid var(--border); 
+      border-radius: 4px; 
+      font-size: 0.85rem;
+    }
+
+    .stepper-input {
+      display: flex;
+      gap: 4px;
+      height: 30px;
+    }
+
+    .stepper-input input {
+      flex: 1;
+      text-align: center;
+      height: 100%;
+    }
+
+    .stepper-btn {
+      background: #e2e8f0;
+      border: 1px solid var(--border);
+      color: var(--primary);
+      border-radius: 4px;
+      width: 30px;
+      height: 100%;
+      font-weight: bold;
+      font-size: 0.9rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+    }
+
+    .stepper-btn:hover:not(:disabled) {
+      background: #cbd5e1;
+    }
+
+    .stepper-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .live-hint {
+      font-size: 0.72rem;
+      color: #64748b;
+      margin-top: 4px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .live-hint strong {
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    .checkbox-group { 
+      grid-column: span 2;
+      display: flex; 
+      align-items: center; 
+      gap: 6px; 
+      background: #fffbe8;
+      padding: 6px 8px;
+      border-radius: 4px;
+      border: 1px solid #fde68a;
+      height: 30px;
+      box-sizing: border-box;
+    }
+
+    .checkbox-group input { width: 14px; height: 14px; margin: 0; }
+    .checkbox-group label { margin: 0; font-size: 0.75rem; color: #92400e; cursor: pointer; height: auto; }
+
+    /* Compact Metrics Column */
+    .summary-metrics {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .metric-card {
+      background: #f8fafc;
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 30px;
+    }
+
+    .metric-card strong { font-size: 0.75rem; color: #64748b; }
+    .metric-card span { font-size: 1rem; font-weight: bold; color: var(--accent); }
+
+    .table-container {
+      max-height: 250px;
+      overflow-y: auto;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      transition: max-height 0.3s ease-in-out;
+    }
+
+    .table-container.expanded {
+      max-height: 80vh;
+    }
+
+    table { 
+      width: 100%; 
+      border-collapse: collapse; 
+      background: #fff; 
+      font-size: 0.82rem;
+    }
+
+    th, td { padding: 6px 10px; text-align: left; }
+    th { 
+      background-color: var(--primary); 
+      color: white; 
+      position: sticky; 
+      top: 0; 
+      z-index: 10;
+      font-size: 0.75rem;
+    }
+    
+    tbody tr { border-bottom: 1px solid var(--border); }
+    tbody tr:nth-child(even) { background-color: #f8fafc; }
+
+    .badge-rip {
+      background: var(--highlight);
+      color: #78350f;
+      padding: 1px 6px;
+      border-radius: 3px;
+      font-weight: 600;
+      font-size: 0.75rem;
+    }
+
+    .badge-full {
+      background: #e0f2fe;
+      color: #0369a1;
+      padding: 1px 6px;
+      border-radius: 3px;
+      font-size: 0.75rem;
+    }
+
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+    }
+
+    .modal {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 400px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    .modal h3 { margin-top: 0; font-size: 1rem; }
+    .modal-actions { display: flex; gap: 8px; margin-top: 15px; justify-content: flex-end; }
+
+    .empty-state {
+      padding: 24px 12px;
+      text-align: center;
+      color: #94a3b8;
+      font-size: 0.85rem;
+    }
+
+    .field-error input {
+      border-color: #dc2626 !important;
+      background: #fef2f2;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%) translateY(10px);
+      background: var(--primary);
+      color: #fff;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      z-index: 200;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <div class="header">
+    <h2>Deck Layout Calculator</h2>
+    <div class="btn-group-header">
+      <button type="button" class="action-btn save" onclick="saveProject()">Save</button>
+      <button type="button" class="action-btn" onclick="openLoadModal()">Load</button>
+      <button type="button" class="action-btn" id="toggleInputsBtn" onclick="toggleInputs()">Collapse</button>
+    </div>
+  </div>
+  
+  <div class="top-panel" id="topPanel">
+    <div class="input-grid">
+      <div class="input-group full">
+        <label for="projectName">Project Name</label>
+        <input type="text" id="projectName" value="My Deck Project" placeholder="Enter deck name...">
+      </div>
+
+      <div class="input-group">
+        <label for="boardWidth">Plank Width</label>
+        <input type="number" id="boardWidth" value="0" min="0" step="0.1">
+      </div>
+
+      <div class="input-group">
+        <label for="gapWidth">Gap Width</label>
+        <input type="number" id="gapWidth" value="0" min="0" step="0.1">
+      </div>
+
+      <div class="input-group full">
+        <label for="deckWidth">Total Floor Width</label>
+        <input type="number" id="deckWidth" value="0" min="0" step="0.1">
+      </div>
+
+      <div class="input-group full">
+        <label for="firstRip">1st Row Rip Width</label>
+        <div class="stepper-input">
+          <button type="button" class="stepper-btn" id="btnMinus" onclick="adjustFirstRip(-1)">-</button>
+          <input type="number" id="firstRip" value="0" min="0" step="0.1">
+          <button type="button" class="stepper-btn" id="btnPlus" onclick="adjustFirstRip(1)">+</button>
+        </div>
+        <div class="live-hint">Last row rip: <strong id="lastRipInline">0</strong></div>
+      </div>
+
+      <div class="checkbox-group">
+        <input type="checkbox" id="centerFloor">
+        <label for="centerFloor">Center floor (equal ends)</label>
+      </div>
+    </div>
+
+    <div class="summary-metrics">
+      <div class="input-group">
+        <label>Summary</label>
+      </div>
+      <div class="metric-card">
+        <strong>Total Boards:</strong>
+        <span id="totalBoards">0</span>
+      </div>
+      <div class="metric-card">
+        <strong>1st Board Rip:</strong>
+        <span id="outFirstRip">0</span>
+      </div>
+      <div class="metric-card">
+        <strong>Last Board Rip:</strong>
+        <span id="outLastRip">0</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-container" id="tableContainer">
+    <table id="layoutTable">
+      <thead>
+        <tr>
+          <th>Row #</th>
+          <th>Type / Width</th>
+          <th>Start Mark</th>
+        </tr>
+      </thead>
+      <tbody id="layoutBody">
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="modal-overlay" id="loadModal">
+  <div class="modal">
+    <h3>Load Saved Project</h3>
+    <select id="projectSelect" style="margin-bottom: 10px;"></select>
+    <div class="modal-actions">
+      <button type="button" class="action-btn" style="background:#dc2626;" onclick="deleteProject()">Delete</button>
+      <button type="button" class="action-btn" onclick="closeLoadModal()">Cancel</button>
+      <button type="button" class="action-btn save" onclick="confirmLoadProject()">Load</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const projectNameInput = document.getElementById('projectName');
+  const boardWidthInput = document.getElementById('boardWidth');
+  const gapWidthInput = document.getElementById('gapWidth');
+  const deckWidthInput = document.getElementById('deckWidth');
+  const firstRipInput = document.getElementById('firstRip');
+  const centerFloorCheckbox = document.getElementById('centerFloor');
+  const btnMinus = document.getElementById('btnMinus');
+  const btnPlus = document.getElementById('btnPlus');
+  const topPanel = document.getElementById('topPanel');
+  const tableContainer = document.getElementById('tableContainer');
+  const toggleInputsBtn = document.getElementById('toggleInputsBtn');
+
+  const EPSILON = 0.01;
+  let firstRipTouched = false;
+
+  [boardWidthInput, gapWidthInput, deckWidthInput, firstRipInput].forEach(element => {
+    element.addEventListener('input', calculate);
+    element.addEventListener('change', calculate);
+  });
+
+  // Once the user edits the rip width themselves, stop auto-filling it.
+  firstRipInput.addEventListener('input', () => { firstRipTouched = true; });
+
+  // Smart default: until the user sets a rip width, keep it in sync with
+  // plank width so an untouched field means "no rip" (a full board) instead
+  // of a meaningless 0"-wide board.
+  boardWidthInput.addEventListener('input', () => {
+    if (!firstRipTouched && !centerFloorCheckbox.checked) {
+      firstRipInput.value = boardWidthInput.value;
+    }
+  });
+
+  centerFloorCheckbox.addEventListener('change', () => {
+    const isCentered = centerFloorCheckbox.checked;
+    firstRipInput.disabled = isCentered;
+    btnMinus.disabled = isCentered;
+    btnPlus.disabled = isCentered;
+    calculate();
+  });
+
+  function toggleInputs() {
+    topPanel.classList.toggle('collapsed');
+    tableContainer.classList.toggle('expanded');
+    
+    if (topPanel.classList.contains('collapsed')) {
+      toggleInputsBtn.textContent = "Expand";
+    } else {
+      toggleInputsBtn.textContent = "Collapse";
+    }
+  }
+
+  function adjustFirstRip(delta) {
+    if (centerFloorCheckbox.checked) return;
+
+    firstRipTouched = true;
+    const boardWidth = parseFloat(boardWidthInput.value) || 0;
+    let currentVal = parseFloat(firstRipInput.value) || 0;
+    currentVal += delta;
+
+    if (currentVal < 0) currentVal = 0;
+    if (boardWidth > 0 && currentVal > boardWidth) currentVal = boardWidth;
+    
+    firstRipInput.value = currentVal;
+    calculate();
+  }
+
+  function showToast(message) {
+    const toast = document.getElementById('toast');
+    toast.textContent = message;
+    toast.classList.add('show');
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => toast.classList.remove('show'), 2200);
+  }
+
+  function calculate() {
+    const boardWidth = parseFloat(boardWidthInput.value) || 0;
+    const gapWidth = Math.max(0, parseFloat(gapWidthInput.value) || 0);
+    const deckWidth = parseFloat(deckWidthInput.value) || 0;
+    const isCentered = centerFloorCheckbox.checked;
+
+    const tableBody = document.getElementById('layoutBody');
+    deckWidthInput.closest('.input-group').classList.toggle('field-error', deckWidth < 0);
+
+    if (boardWidth <= 0 || deckWidth <= 0) {
+      document.getElementById('totalBoards').textContent = '0';
+      document.getElementById('outFirstRip').textContent = '0';
+      document.getElementById('outLastRip').textContent = '0';
+      document.getElementById('lastRipInline').textContent = '0';
+      tableBody.innerHTML = '<tr><td colspan="3"><div class="empty-state">Enter a plank width and total floor width to see the layout</div></td></tr>';
+      return;
+    }
+
+    const pitch = boardWidth + gapWidth;
+    let firstRip, lastRip = 0, fullBoards = 0, totalBoards;
+
+    if (isCentered) {
+      if (deckWidth <= boardWidth + EPSILON) {
+        // Deck narrower than one board: it's just a single rip, no gaps.
+        firstRip = deckWidth;
+        lastRip = 0;
+        fullBoards = 0;
+        totalBoards = 1;
+      } else {
+        // Find the fewest boards N for which two equal-width end rips
+        // (each <= a full board) exactly fill the deck. As N grows the
+        // required rip width shrinks, so the smallest valid N is the
+        // first one where the rip no longer exceeds a full board.
+        const exactN = (deckWidth + gapWidth) / pitch;
+        let n = Math.max(2, Math.ceil(exactN - EPSILON));
+        let rip = (deckWidth - (n - 2) * boardWidth - (n - 1) * gapWidth) / 2;
+
+        while (rip > boardWidth + EPSILON && n < 100000) {
+          n += 1;
+          rip = (deckWidth - (n - 2) * boardWidth - (n - 1) * gapWidth) / 2;
+        }
+        while (rip < -EPSILON && n > 2) {
+          n -= 1;
+          rip = (deckWidth - (n - 2) * boardWidth - (n - 1) * gapWidth) / 2;
+        }
+
+        firstRip = Math.max(0, rip);
+        lastRip = firstRip;
+        fullBoards = Math.max(0, n - 2);
+        totalBoards = n;
+      }
+      firstRipInput.value = firstRip.toFixed(2);
+    } else {
+      let inputRip = parseFloat(firstRipInput.value);
+      // An unset or 0" rip isn't a physically meaningful board, so treat
+      // it as "no rip" (a full-width first board) rather than inserting
+      // a phantom 0"-wide row.
+      if (isNaN(inputRip) || inputRip <= 0) {
+        inputRip = boardWidth;
+      } else if (inputRip > boardWidth) {
+        inputRip = boardWidth;
+        firstRipInput.value = boardWidth;
+      }
+      firstRip = inputRip;
+
+      const remainingWidth = deckWidth - firstRip - gapWidth;
+      if (remainingWidth > EPSILON) {
+        fullBoards = Math.floor((remainingWidth + EPSILON) / pitch);
+        const leftover = remainingWidth - fullBoards * pitch;
+        lastRip = leftover > EPSILON ? leftover : 0;
+      }
+      totalBoards = 1 + fullBoards + (lastRip > EPSILON ? 1 : 0);
+    }
+
+    document.getElementById('totalBoards').textContent = totalBoards;
+    document.getElementById('outFirstRip').textContent = firstRip.toFixed(2);
+    document.getElementById('outLastRip').textContent = (lastRip > EPSILON ? lastRip : boardWidth).toFixed(2);
+    document.getElementById('lastRipInline').textContent = (lastRip > EPSILON ? lastRip : boardWidth).toFixed(2);
+
+    tableBody.innerHTML = '';
+    let currentPos = 0;
+
+    for (let row = 1; row <= totalBoards; row++) {
+      let currentBoardWidth = boardWidth;
+
+      if (row === 1) {
+        currentBoardWidth = firstRip;
+      } else if (row === totalBoards && lastRip > EPSILON) {
+        currentBoardWidth = lastRip;
+      }
+
+      const isFullWidth = Math.abs(currentBoardWidth - boardWidth) < EPSILON;
+      const badgeHtml = isFullWidth
+        ? `<span class="badge-full">${boardWidth.toFixed(2)}</span>`
+        : `<span class="badge-rip">Rip: ${currentBoardWidth.toFixed(2)}</span>`;
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><strong>Row ${row}</strong></td>
+        <td>${badgeHtml}</td>
+        <td><strong>${currentPos.toFixed(2)}</strong></td>
+      `;
+      tableBody.appendChild(tr);
+
+      currentPos += currentBoardWidth + gapWidth;
+    }
+  }
+
+  function saveProject() {
+    const name = projectNameInput.value.trim() || 'Untitled Deck';
+    const projectData = {
+      name: name,
+      boardWidth: boardWidthInput.value,
+      gapWidth: gapWidthInput.value,
+      deckWidth: deckWidthInput.value,
+      firstRip: firstRipInput.value,
+      isCentered: centerFloorCheckbox.checked
+    };
+
+    let projects = JSON.parse(localStorage.getItem('decking_projects') || '{}');
+    projects[name] = projectData;
+    localStorage.setItem('decking_projects', JSON.stringify(projects));
+
+    showToast(`Saved "${name}"`);
+  }
+
+  function openLoadModal() {
+    const projects = JSON.parse(localStorage.getItem('decking_projects') || '{}');
+    const select = document.getElementById('projectSelect');
+    select.innerHTML = '';
+
+    const keys = Object.keys(projects);
+    if (keys.length === 0) {
+      showToast('No saved projects found');
+      return;
+    }
+
+    keys.forEach(key => {
+      const opt = document.createElement('option');
+      opt.value = key;
+      opt.textContent = key;
+      select.appendChild(opt);
+    });
+
+    document.getElementById('loadModal').style.display = 'flex';
+  }
+
+  function closeLoadModal() {
+    document.getElementById('loadModal').style.display = 'none';
+  }
+
+  function confirmLoadProject() {
+    const select = document.getElementById('projectSelect');
+    const name = select.value;
+    const projects = JSON.parse(localStorage.getItem('decking_projects') || '{}');
+    
+    if (projects[name]) {
+      const p = projects[name];
+      projectNameInput.value = p.name;
+      boardWidthInput.value = p.boardWidth;
+      gapWidthInput.value = p.gapWidth;
+      deckWidthInput.value = p.deckWidth;
+      firstRipInput.value = p.firstRip;
+      centerFloorCheckbox.checked = p.isCentered;
+      firstRipTouched = true;
+
+      firstRipInput.disabled = p.isCentered;
+      btnMinus.disabled = p.isCentered;
+      btnPlus.disabled = p.isCentered;
+
+      calculate();
+      closeLoadModal();
+    }
+  }
+
+  function deleteProject() {
+    const select = document.getElementById('projectSelect');
+    const name = select.value;
+    if (!name) return;
+
+    if (confirm(`Delete saved project "${name}"?`)) {
+      let projects = JSON.parse(localStorage.getItem('decking_projects') || '{}');
+      delete projects[name];
+      localStorage.setItem('decking_projects', JSON.stringify(projects));
+      openLoadModal();
+    }
+  }
+
+  calculate();
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    });
+  }
+</script>
+
+</body>
+</html>
